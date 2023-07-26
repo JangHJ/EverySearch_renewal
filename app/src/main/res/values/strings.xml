@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">tel_project</string>
+    <string name="search_title">SWU 전화번호부</string>
+    <string name="search_hint">검색할 단어를 입력해주세요</string>
+    <string name="search_button">검색</string>
+    <string name="title_tel">전화번호</string>
+    <string name="title_book">즐겨찾기</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
+</resources>

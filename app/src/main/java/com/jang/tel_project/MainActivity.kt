@@ -9,14 +9,11 @@ import androidx.fragment.app.Fragment
 import com.github.kittinunf.fuel.httpGet
 import com.github.kittinunf.result.Result
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.jang.tel_project.FavoritesFragment
-import com.jang.tel_project.PhoneNumberFragment
-import com.jang.tel_project.R
 import org.json.JSONArray
 import org.json.JSONObject
 import org.jsoup.Jsoup
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import com.github.kittinunf.fuel.core.FuelManager
+import com.github.kittinunf.fuel.toolbox.HttpClient
 
 class MainActivity : AppCompatActivity() {
 
@@ -62,6 +59,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             // PhoneNumberFragment로 데이터 전달
             val phoneNumberData = JSONArray(jsonData)
+            Log.d("TEST@@@", "phoneNumberData: $phoneNumberData")
             val phoneNumberFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer) as PhoneNumberFragment
             phoneNumberFragment.setData(phoneNumberData)
         }
@@ -81,52 +79,37 @@ class MainActivity : AppCompatActivity() {
                     // jsoup을 사용하여 웹 페이지 파싱
                     val doc = Jsoup.parse(content)
 
-                    val titleArr = mutableListOf<String>()
                     val phoneNumberData = JSONArray()
+
+                    Log.d("TEST@@", "phoneNumberData: $phoneNumberData")
 
                     val listElements = doc.select("ul.pnl_list > li")
                     for (listElement in listElements) {
                         val title = listElement.select("h1").text()
-                        titleArr.add(title)
-
-                        // 팀명이 존재한다면, 해당 팀원들의 정보를 추출하여 저장
                         val teamName = listElement.select("div.tt2").text()
-                        if (teamName.isNotEmpty()) {
-                            val teamMembers = listElement.select("table tbody tr")
-                            for (teamMember in teamMembers) {
-                                val memberName = teamMember.select("td.label").text()
-                                val memberPhoneNumber = teamMember.select("td.label + td").text()
 
-                                val jsonObject = JSONObject()
-                                jsonObject.put("name", memberName)
-                                jsonObject.put("phone", memberPhoneNumber)
-                                phoneNumberData.put(jsonObject)
-                            }
+                        val group = if (teamName.isNotEmpty()) {
+                            "$title - $teamName" // tt2 내용이 있을 경우 title과 tt2 내용을 합쳐서 group 생성
+                        } else {
+                            title // tt2 내용이 없을 경우 그냥 title 사용
+                        }
+
+                        val teamMembers = listElement.select("div.table0.center table tbody tr")
+                        for (i in 0 until teamMembers.size step 2) {
+                            val memberName = teamMembers[i].select("td").text()
+                            val memberPhoneNumber = teamMembers[i + 1].select("td").text()
+
+                            val jsonObject = JSONObject()
+                            jsonObject.put("group", group)
+                            jsonObject.put("name", memberName)
+                            jsonObject.put("phone", memberPhoneNumber)
+                            phoneNumberData.put(jsonObject)
                         }
                     }
 
                     // 크롤링한 데이터를 SharedPreferences에 저장
                     val editor = sharedPreferences.edit()
                     editor.putString("phone_data", phoneNumberData.toString())
-                    editor.apply()
-
-                    // 타이틀 배열에서 "대학" 문자열이 있는지 확인하고, 대학과 기관으로 데이터 분류
-                    val universityData = JSONArray()
-                    val institutionData = JSONArray()
-                    for (i in titleArr.indices) {
-                        val title = titleArr[i]
-                        val dataObject = JSONObject()
-                        dataObject.put("title", title)
-                        if (title.contains("대학")) {
-                            universityData.put(dataObject)
-                        } else {
-                            institutionData.put(dataObject)
-                        }
-                    }
-
-                    // 크롤링한 대학과 기관 데이터를 SharedPreferences에 저장
-                    editor.putString("university_data", universityData.toString())
-                    editor.putString("institution_data", institutionData.toString())
                     editor.apply()
                 }
                 is Result.Failure -> {
